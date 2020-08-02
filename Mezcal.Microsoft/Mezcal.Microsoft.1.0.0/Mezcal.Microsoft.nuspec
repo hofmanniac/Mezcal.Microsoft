@@ -12,6 +12,7 @@
     <license type="file">LICENSE.txt</license>
     <licenseUrl>https://aka.ms/deprecateLicenseUrl</licenseUrl>
     <repository type="GitHub" url="https://github.com/hofmanniac/Mezcal.Microsoft" />
+    <releaseNotes>Initial release.</releaseNotes>
     <dependencies>
       <dependency id="Mezcal" version="1.0.0" />
       <dependency id="Microsoft.CrmSdk.CoreAssemblies" version="9.0.2.26" />

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Mezcal.Commands;
 using Mezcal.Connections;
+using Mezcal.Microsoft.BingSearch;
 using Mezcal.Microsoft.CommonDataService;
 
 namespace Mezcal.Microsoft
@@ -33,6 +34,7 @@ namespace Mezcal.Microsoft
             else if (commandName == "cds-import-data") { result = new CDSImportData(); }
             else if (commandName == "cds-retrieve-data") { result = new CDSRetrieveData(); }
             else if (commandName == "cds-retrieve") { result = new CDSRetrieve(); }
+            else if (commandName == "bing-websearch") { result = new SearchBing(); }
 
             return result;
         }
