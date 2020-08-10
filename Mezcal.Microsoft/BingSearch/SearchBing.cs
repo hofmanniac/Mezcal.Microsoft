@@ -22,7 +22,9 @@ namespace Mezcal.Microsoft.BingSearch
             if (context.Variables.ContainsKey(configKey) == false) { return; }
 
             accessKey = context.Variables[configKey].ToString();
-            string searchTerm = command["search-term"].ToString();
+
+            var searchTerm = JSONUtil.GetText(command, "#bing-websearch");
+            if (searchTerm == null) { searchTerm = JSONUtil.GetText(command, "search-term"); }
 
             var setName = JSONUtil.GetText(command, "set");
 
@@ -89,76 +91,76 @@ namespace Mezcal.Microsoft.BingSearch
             return searchResult;
         }
 
-        /// <summary>
-        /// Formats the JSON string by adding line breaks and indents.
-        /// </summary>
-        /// <param name="json">The raw JSON string.</param>
-        /// <returns>The formatted JSON string.</returns>
-        static string JsonPrettyPrint(string json)
-        {
-            if (string.IsNullOrEmpty(json))
-                return string.Empty;
+        ///// <summary>
+        ///// Formats the JSON string by adding line breaks and indents.
+        ///// </summary>
+        ///// <param name="json">The raw JSON string.</param>
+        ///// <returns>The formatted JSON string.</returns>
+        //static string JsonPrettyPrint(string json)
+        //{
+        //    if (string.IsNullOrEmpty(json))
+        //        return string.Empty;
 
-            json = json.Replace(Environment.NewLine, "").Replace("\t", "");
+        //    json = json.Replace(Environment.NewLine, "").Replace("\t", "");
 
-            StringBuilder sb = new StringBuilder();
-            bool quote = false;
-            bool ignore = false;
-            char last = ' ';
-            int offset = 0;
-            int indentLength = 2;
+        //    StringBuilder sb = new StringBuilder();
+        //    bool quote = false;
+        //    bool ignore = false;
+        //    char last = ' ';
+        //    int offset = 0;
+        //    int indentLength = 2;
 
-            foreach (char ch in json)
-            {
-                switch (ch)
-                {
-                    case '"':
-                        if (!ignore) quote = !quote;
-                        break;
-                    case '\\':
-                        if (quote && last != '\\') ignore = true;
-                        break;
-                }
+        //    foreach (char ch in json)
+        //    {
+        //        switch (ch)
+        //        {
+        //            case '"':
+        //                if (!ignore) quote = !quote;
+        //                break;
+        //            case '\\':
+        //                if (quote && last != '\\') ignore = true;
+        //                break;
+        //        }
 
-                if (quote)
-                {
-                    sb.Append(ch);
-                    if (last == '\\' && ignore) ignore = false;
-                }
-                else
-                {
-                    switch (ch)
-                    {
-                        case '{':
-                        case '[':
-                            sb.Append(ch);
-                            sb.Append(Environment.NewLine);
-                            sb.Append(new string(' ', ++offset * indentLength));
-                            break;
-                        case ']':
-                        case '}':
-                            sb.Append(Environment.NewLine);
-                            sb.Append(new string(' ', --offset * indentLength));
-                            sb.Append(ch);
-                            break;
-                        case ',':
-                            sb.Append(ch);
-                            sb.Append(Environment.NewLine);
-                            sb.Append(new string(' ', offset * indentLength));
-                            break;
-                        case ':':
-                            sb.Append(ch);
-                            sb.Append(' ');
-                            break;
-                        default:
-                            if (quote || ch != ' ') sb.Append(ch);
-                            break;
-                    }
-                }
-                last = ch;
-            }
-            return sb.ToString().Trim();
-        }
+        //        if (quote)
+        //        {
+        //            sb.Append(ch);
+        //            if (last == '\\' && ignore) ignore = false;
+        //        }
+        //        else
+        //        {
+        //            switch (ch)
+        //            {
+        //                case '{':
+        //                case '[':
+        //                    sb.Append(ch);
+        //                    sb.Append(Environment.NewLine);
+        //                    sb.Append(new string(' ', ++offset * indentLength));
+        //                    break;
+        //                case ']':
+        //                case '}':
+        //                    sb.Append(Environment.NewLine);
+        //                    sb.Append(new string(' ', --offset * indentLength));
+        //                    sb.Append(ch);
+        //                    break;
+        //                case ',':
+        //                    sb.Append(ch);
+        //                    sb.Append(Environment.NewLine);
+        //                    sb.Append(new string(' ', offset * indentLength));
+        //                    break;
+        //                case ':':
+        //                    sb.Append(ch);
+        //                    sb.Append(' ');
+        //                    break;
+        //                default:
+        //                    if (quote || ch != ' ') sb.Append(ch);
+        //                    break;
+        //            }
+        //        }
+        //        last = ch;
+        //    }
+        //    return sb.ToString().Trim();
+        //}
 
         public JObject Prompt(CommandEngine commandEngine)
         {

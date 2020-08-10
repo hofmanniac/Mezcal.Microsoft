@@ -7,6 +7,7 @@ using Mezcal.Commands;
 using Mezcal.Connections;
 using Mezcal.Microsoft.BingSearch;
 using Mezcal.Microsoft.CommonDataService;
+using Newtonsoft.Json.Linq;
 
 namespace Mezcal.Microsoft
 {
@@ -18,15 +19,17 @@ namespace Mezcal.Microsoft
 
             if (envConfig.Type == "Microsoft.CommonDataService")
             {
-                result = new CommonDataService.CDSConnection(envConfig);
+                result = new CDSConnection(envConfig);
             }
 
             return result;
         }
 
-        public ICommand ResolveCommand(string commandName)
+        public ICommand ResolveCommand(JObject joCommand)
         {
             ICommand result = null;
+
+            var commandName = JSONUtil.GetCommandName(joCommand);
 
             if (commandName == null) { return null; }
             if (commandName == "cds-create-entity") { result = new CDSCreateEntity(); }
@@ -35,6 +38,7 @@ namespace Mezcal.Microsoft
             else if (commandName == "cds-retrieve-data") { result = new CDSRetrieveData(); }
             else if (commandName == "cds-retrieve") { result = new CDSRetrieve(); }
             else if (commandName == "bing-websearch") { result = new SearchBing(); }
+            //else if (commandName == "excel-load") { result = new Office.LoadExcel(); }
 
             return result;
         }
