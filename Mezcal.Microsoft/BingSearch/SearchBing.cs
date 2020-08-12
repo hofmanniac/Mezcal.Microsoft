@@ -18,9 +18,10 @@ namespace Mezcal.Microsoft.BingSearch
 
         public void Process(JObject command, Context context)
         {
+            context.Trace("bing-websearch");
+
             var configKey = "$bingsearch-key";
             if (context.Variables.ContainsKey(configKey) == false) { return; }
-
             accessKey = context.Variables[configKey].ToString();
 
             var searchTerm = JSONUtil.GetText(command, "#bing-websearch");

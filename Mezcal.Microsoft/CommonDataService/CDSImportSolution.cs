@@ -20,11 +20,12 @@ namespace Mezcal.Microsoft.CommonDataService
 
         public void Process(JObject command, Context context)
         {
-            var source = command["source"].ToString();
+            var source = command["#import-solution"];
+            if (source == null) { source = command["source"]; }
 
             source = context.ReplaceVariables(source);
 
-            this.Import(source, context);
+            this.Import(source.ToString(), context);
         }
 
         private void Import(string solutionPath, Context context)

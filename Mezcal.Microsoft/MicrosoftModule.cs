@@ -39,6 +39,8 @@ namespace Mezcal.Microsoft
             else if (commandName == "cds-retrieve") { result = new CDSRetrieve(); }
             else if (commandName == "bing-websearch") { result = new SearchBing(); }
             //else if (commandName == "excel-load") { result = new Office.LoadExcel(); }
+            else if (commandName == "sharepoint-download") { result = new Office.SharePointDownload(); }
+            else if (commandName == "word-export") { result = new Office.WordExport(); }
 
             return result;
         }

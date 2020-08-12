@@ -29,8 +29,8 @@ namespace Mezcal.Microsoft.CommonDataService
 
             var entity = cdsConnection.Retrieve(entityName, recordId, columnSet);
 
-            // todo - convert to json
-            context.Store(into, entity);
+            var jtEntity = JToken.FromObject(entity);
+            context.Store(into, jtEntity);
         }
     }
 }
