@@ -31,9 +31,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Mezcal, Version=1.0.2.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Mezcal.1.0.2\lib\netstandard2.0\Mezcal.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.Crm.Sdk.Proxy, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.CrmSdk.CoreAssemblies.9.0.2.26\lib\net462\Microsoft.Crm.Sdk.Proxy.dll</HintPath>
     </Reference>
@@ -181,6 +178,12 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Mezcal\Mezcal\Mezcal.csproj">
+      <Project>{677c6de9-097c-49eb-9080-8545ac8ab268}</Project>
+      <Name>Mezcal</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

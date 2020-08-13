@@ -25,15 +25,17 @@ namespace Mezcal.Microsoft.CommonDataService
             string source = command["source"].ToString();
             JArray map = (JArray)command["map"];
 
+            CDSConnection cdsConnection = CDSConnection.FromCommand(command, context);
+            if (cdsConnection == null) { return; }
+
             JArray set = (JArray)context.Fetch(source);
             this._context = context;
 
-            this.LoadData(entity, set, map);
+            this.LoadData(entity, set, map, cdsConnection);
         }
 
-        public void LoadData(string entityName, JArray data, JArray map)
+        public void LoadData(string entityName, JArray data, JArray map, CDSConnection cdsConnection)
         {
-            var cdsConnection = (CDSConnection)_context.DefaultConnection;
             var em = cdsConnection.GetEntityMetadata(entityName);
             if (em == null)
             {
@@ -119,6 +121,12 @@ namespace Mezcal.Microsoft.CommonDataService
                         string val = valToken.ToString();
                         var valDateTime = DateTime.Parse(val);
                         cdsEntity.Attributes.Add(targetName, valDateTime);
+                    }
+                    else if (atr.AttributeTypeName.Value == "BooleanType")
+                    {
+                        string val = valToken.ToString();
+                        var valBoolean = Boolean.Parse(val);
+                        cdsEntity.Attributes.Add(targetName, valBoolean);
                     }
                     else if (atr.AttributeTypeName.Value == "UniqueidentifierType")
                     {

@@ -20,15 +20,18 @@ namespace Mezcal.Microsoft.CommonDataService
 
         public void Process(JObject command, Context context)
         {
-            var source = command["#import-solution"];
+            var source = command["#cds-import-solution"];
             if (source == null) { source = command["source"]; }
 
-            source = context.ReplaceVariables(source);
+            //source = context.ReplaceVariables(source);
 
-            this.Import(source.ToString(), context);
+            CDSConnection cdsConnection = CDSConnection.FromCommand(command, context);
+            if (cdsConnection == null) { return; }
+
+            this.Import(source.ToString(), cdsConnection, context);
         }
 
-        private void Import(string solutionPath, Context context)
+        private void Import(string solutionPath, CDSConnection cdsConnection, Context context)
         {
             byte[] fileBytes = File.ReadAllBytes(solutionPath);
 
@@ -39,8 +42,7 @@ namespace Mezcal.Microsoft.CommonDataService
             };
 
             Console.WriteLine($"Importing {solutionPath}");
-
-            var cdsConnection = (CDSConnection)context.DefaultConnection;
+            
             cdsConnection.Execute(impSolReqWithMonitoring);
 
             var job = cdsConnection.Retrieve("importjob",

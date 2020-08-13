@@ -25,6 +25,24 @@ namespace Mezcal.Microsoft.CommonDataService
             this._config = config;
         }
 
+        public static CDSConnection FromCommand(JToken command, Context context)
+        {
+            CDSConnection cdsConnection = null;
+            var config = command["config"];
+            if (config == null) { cdsConnection = (CDSConnection)context.DefaultConnection; }
+            else { cdsConnection = new CDSConnection(config); }
+            if (cdsConnection == null) { Console.WriteLine("No connection configuration information available. Aborting operation."); return null; }
+            return cdsConnection;
+        }
+        public CDSConnection(JToken config)
+        {
+            var url = JSONUtil.GetText(config, "url");
+            var username = JSONUtil.GetText(config, "username");
+            var password = JSONUtil.GetText(config, "p");
+
+            this._config = new ConnectionConfig(url, username, password);
+        }
+
         private IOrganizationService GetService()
         {
             StringBuilder connectionString = new StringBuilder();
