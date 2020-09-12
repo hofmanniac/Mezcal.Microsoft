@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Mezcal.Connections;
+using System.Runtime.CompilerServices;
 
 namespace Mezcal.Microsoft.CommonDataService
 {
@@ -90,6 +91,166 @@ namespace Mezcal.Microsoft.CommonDataService
             }
         }
 
+        public static List<Entity> ConvertToCDSEntities(string entityName, JArray data, JArray map, CDSConnection cdsConnection)
+        {
+            var result = new List<Entity>();
+
+            var em = cdsConnection.GetEntityMetadata(entityName);
+            if (em == null)
+            {
+                Console.WriteLine("Unable to load entity metadata for " + entityName + " - skipping.");
+                return null;
+            }
+
+            foreach (var item in data)
+            {
+                Entity cdsEntity = new Entity(entityName);
+                var record = (JObject)item;
+
+                foreach (var field in record)
+                {
+                    string targetName = DetermineTargetName(field.Key, map, record);
+                    if (targetName == null) { continue; }
+
+                    var atr = em.Attributes.FirstOrDefault(a => a.LogicalName == targetName);
+                    if (atr == null) { continue; }
+
+                    var atrVal = ConvertToAttribute(atr, record[field.Key]);
+                    if (atrVal == null) { continue; }
+                    cdsEntity.Attributes.Add(targetName, atrVal);
+                }
+
+                result.Add(cdsEntity);
+            }
+
+            return result;
+        }
+
+        private static object ConvertToAttribute(AttributeMetadata atr, JToken valToken)
+        {
+            if (valToken == null) { return null; }
+
+            if (atr.AttributeTypeName.Value == "LookupType")
+            {
+                string lookupTo = null;
+                string id = null;
+
+                if (valToken.HasValues == false)
+                {
+                    var erAtr = (LookupAttributeMetadata)atr;
+                    lookupTo = erAtr.Targets[0];
+                    id = valToken.ToString();
+                }
+
+                if (lookupTo != null && id != null)
+                {
+                    var er = new EntityReference(lookupTo);
+                    er.Id = new Guid(id);
+                    return er;
+                }
+            }
+            else if (atr.AttributeTypeName.Value == "PicklistType")
+            {
+                string val = null;
+
+                if (valToken.HasValues == false) { val = valToken.ToString(); }
+                else { val = valToken["value"].ToString(); }
+
+                int numval = Int32.Parse(val);
+                var osv = new OptionSetValue(numval);
+                return osv;
+            }
+            else if (atr.AttributeTypeName.Value == "IntegerType")
+            {
+                string val = valToken.ToString();
+                int numval = Int32.Parse(val);
+                return numval;
+            }
+            else if (atr.AttributeTypeName.Value == "DateTimeType")
+            {
+                string val = valToken.ToString();
+                var valDateTime = DateTime.Parse(val);
+                return valDateTime;
+            }
+            else if (atr.AttributeTypeName.Value == "BooleanType")
+            {
+                string val = valToken.ToString();
+                var valBoolean = Boolean.Parse(val);
+                return valBoolean;
+            }
+            else if (atr.AttributeTypeName.Value == "MoneyType")
+            {
+                string val = valToken.ToString();
+                var valMoney = new Money(Decimal.Parse(val));
+                return valMoney;
+            }
+            else if (atr.AttributeTypeName.Value == "UniqueidentifierType")
+            {
+                Guid val = new Guid(valToken.ToString());
+                return val;
+            }
+            else
+            {
+                string val = valToken.ToString();
+                return val;
+            }
+
+            return null;
+        }
+
+        private static string DetermineTargetName(string fieldName, JArray map, JObject record)
+        {
+            string targetName = fieldName;
+
+            if (map != null)
+            {
+                // find this field in the map, lookup by source
+                var mapEntry = map.FirstOrDefault(m => m["source"].ToString() == fieldName);
+
+                // if no map entry found by source field, then not mapped - skip this field
+                if (mapEntry == null) { return null; }
+
+                // else a map entry was found for this source, grab target info
+                var target = mapEntry["target"];
+
+                // if target info not found - assume will use source name
+                if (target == null) { targetName = mapEntry["source"].ToString(); }
+
+                // target info was found
+                else
+                {
+                    // if target is a simple string, use that
+                    if (target.Type == JTokenType.String)
+                    {
+                        targetName = target.ToString();
+                    }
+                    else if (target.Type == JTokenType.Array)
+                    {
+                        // else is array of choices, need to figure out which one applies
+                        var jaTarget = (JArray)target;
+
+                        foreach (var targetOption in jaTarget)
+                        {
+                            // {"#if": {"equals": "govcdm_role", "value": "12345"}, "#then": "govcdm_primarysubject"}
+                            var condition = targetOption["#if"];
+                            var conditionField = condition["equals"];
+                            var conditionValue = condition["value"];
+
+                            var recordValue = record[conditionField.ToString()];
+                            if (recordValue.ToString() == conditionValue.ToString())
+                            {
+                                var action = targetOption["#then"];
+                                targetName = action.ToString();
+                                break;
+                            }
+
+                        }
+                    }
+                }
+            }
+
+            return targetName;
+        }
         public JArray RetrieveEntityData(string entity, ColumnSet columns)
         {
             this.Connect();
@@ -158,10 +319,15 @@ namespace Mezcal.Microsoft.CommonDataService
         public Guid Create(Entity entity)
         {
             this.Connect();
-
             return this.ServiceEndpoint.Create(entity);
         }
 
+        public void Update(Entity entity)
+        {
+            this.Connect();
+            this.ServiceEndpoint.Update(entity);
+
+        }
         private void Connect()
         {
             if (this.ServiceEndpoint == null) { this.ServiceEndpoint = GetService(); }

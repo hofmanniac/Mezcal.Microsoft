@@ -165,10 +165,12 @@
     <Compile Include="BingSearch\SearchBing.cs" />
     <Compile Include="CommonDataService\CDSConnection.cs" />
     <Compile Include="CommonDataService\CDSCreateEntity.cs" />
+    <Compile Include="CommonDataService\CDSCreateField.cs" />
     <Compile Include="CommonDataService\CDSImportData.cs" />
     <Compile Include="CommonDataService\CDSImportSolution.cs" />
     <Compile Include="CommonDataService\CDSRetrieve.cs" />
     <Compile Include="CommonDataService\CDSRetrieveData.cs" />
+    <Compile Include="CommonDataService\CDSUpdateData.cs" />
     <Compile Include="MicrosoftModule.cs" />
     <Compile Include="Office\LoadExcel.cs" />
     <Compile Include="Office\SharePointDownload.cs" />

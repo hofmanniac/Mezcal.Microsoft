@@ -35,6 +35,7 @@ namespace Mezcal.Microsoft
             if (commandName == "cds-create-entity") { result = new CDSCreateEntity(); }
             else if (commandName == "cds-import-solution") { result = new CDSImportSolution(); }
             else if (commandName == "cds-import-data") { result = new CDSImportData(); }
+            else if (commandName == "cds-update-data") { result = new CDSUpdateData(); }
             else if (commandName == "cds-retrieve-data") { result = new CDSRetrieveData(); }
             else if (commandName == "cds-retrieve") { result = new CDSRetrieve(); }
             else if (commandName == "bing-websearch") { result = new SearchBing(); }
