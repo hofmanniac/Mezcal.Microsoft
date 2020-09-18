@@ -8,11 +8,15 @@ using Mezcal.Commands;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Messages;
+using Mezcal.Connections;
+using System.Net.PeerToPeer.Collaboration;
 
 namespace Mezcal.Microsoft.CommonDataService
 {
     public class CDSCreateEntity : ICommand
     {
+        private CDSConnection _cdsConnection;
+
         public JObject Prompt(CommandEngine commandEngine)
         {
             return null;
@@ -20,10 +24,28 @@ namespace Mezcal.Microsoft.CommonDataService
 
         public void Process(JObject command, Context context)
         {
-            string schemaName = command["schemaname"].ToString();
-            string displayName = command["displayname"].ToString();
-            string collectionName = command["collectionname"].ToString();
-            string primaryFieldName = command["primaryfieldname"].ToString();
+            var config = command["config"];
+            if (config == null) { return; }
+            var joConfig = context.FindItemByName(config.ToString());
+
+            this._cdsConnection = new CDSConnection(joConfig);
+            if (this._cdsConnection == null) { return; }
+
+            this.CreateEntity(command, context);       
+        }
+
+        public void CreateEntity(JObject command, Context context)
+        {
+            var schemaName = JSONUtil.GetText(command, "#cds-entity");
+            if (schemaName == null) { schemaName = JSONUtil.GetText(command, "schemaname"); }
+            if (schemaName == null) { return; }
+
+            var joEntity = context.FindItemByName(schemaName);
+            if (joEntity == null) { return; }
+
+            string displayName = joEntity["displayname"].ToString();
+            string collectionName = joEntity["collectionname"].ToString();
+            string primaryFieldName = joEntity["primaryfieldname"].ToString();
 
             EntityMetadata entity = new EntityMetadata();
             entity.SchemaName = schemaName;
@@ -33,15 +55,14 @@ namespace Mezcal.Microsoft.CommonDataService
             entity.OwnershipType = OwnershipTypes.UserOwned;
             entity.IsActivity = false;
 
-            this.Create(entity, primaryFieldName, context);
+            this.Create(entity, primaryFieldName);
         }
 
-        public void Create(EntityMetadata entity, string primaryFieldName, Context context)
+        public void Create(EntityMetadata entity, string primaryFieldName)
         {
             if (entity.SchemaName == null) { return; }
 
-            var cdsConnection = (CDSConnection)context.GetConnection();
-            var em = cdsConnection.GetEntityMetadata(entity.SchemaName);
+            var em = this._cdsConnection.GetEntityMetadata(entity.SchemaName);
 
             if (em == null)
             {
@@ -57,7 +78,7 @@ namespace Mezcal.Microsoft.CommonDataService
                 createRequest.PrimaryAttribute = atr;
 
                 Console.WriteLine("Creating entity...");
-                cdsConnection.Execute(createRequest);
+                this._cdsConnection.Execute(createRequest);
                 Console.WriteLine("Entity created.");
             }
         }

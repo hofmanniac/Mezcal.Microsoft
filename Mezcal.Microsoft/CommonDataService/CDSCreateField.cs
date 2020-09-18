@@ -14,15 +14,19 @@ namespace Mezcal.Microsoft.CommonDataService
 {
     public class CDSCreateField: ICommand
     {
-        private Context _context;
         private CDSConnection _cdsConnection;
 
         public void Process(JObject command, Context context)
         {
-            this._context = context;
-
             this._cdsConnection = CDSConnection.FromCommand(command, context);
             if (this._cdsConnection == null) { return; }
+
+            this.CreateField(command);
+        }
+
+        public void SetConnection(CDSConnection cdsConnection)
+        {
+            this._cdsConnection = cdsConnection;
         }
 
         public JObject Prompt(CommandEngine commandEngine)
@@ -30,39 +34,41 @@ namespace Mezcal.Microsoft.CommonDataService
             throw new NotImplementedException();
         }
 
-        /*
-        private void CreateField(JToken entity, JToken field)
+        public void CreateField(JToken field)
         {
-            var displayName = entity["displayname"];
-            var fieldType = entity["fieldtype"].ToString();
+            var schemaName = JSONUtil.GetText(field, "#cds-field");
+            if (schemaName == null) { schemaName = JSONUtil.GetText(field, "schemaname"); }
+            if (schemaName == null) { return; }
+
+            var displayName = field["displayname"];
+            var fieldType = field["fieldtype"].ToString();
 
             Console.WriteLine("Creating field " + displayName.ToString());
-            if (fieldType == "StringType" || fieldType == "TextType") { this.CreateTextField(entity, field); }
-            else if (fieldType == "MoneyType") { this.CreateMoneyField(entity, field); }
-            else if (fieldType == "LookupType") { this.CreateLookupField(entity, field); }
-            else if (fieldType == "DateTimeType") { this.CreateDateTimeField(entity, field); }
-            else if (fieldType == "BooleanType") { this.CreateBooleanField(entity, field); }
-            else if (fieldType == "IntegerType") { this.CreateIntegerField(entity, field); }
-            else if (fieldType == "OptionSetType") { this.CreateOptionSetField(entity, field); }
+            if (fieldType == "text" || fieldType == "TextType") { this.CreateTextField(field); }
+            else if (fieldType == "money") { this.CreateMoneyField(field); }
+            else if (fieldType == "lookup") { this.CreateLookupField(field); }
+            else if (fieldType == "datetime") { this.CreateDateTimeField(field); }
+            else if (fieldType == "boolean") { this.CreateBooleanField(field); }
+            else if (fieldType == "integer") { this.CreateIntegerField(field); }
+            else if (fieldType == "optionset") { this.CreateOptionSetField(field); }
         }
 
-        private void CreateOptionSetField(JToken cdsEntity, JToken field)
+        private void CreateOptionSetField(JToken field)
         {
             CreateAttributeRequest req = new CreateAttributeRequest();
-            req.EntityName = cdsEntity["schemaname"].ToString();
+            req.EntityName = field["entity"].ToString();
 
             var am = new PicklistAttributeMetadata();
             am.SchemaName = field["schemaname"].ToString();
             am.RequiredLevel = new AttributeRequiredLevelManagedProperty(AttributeRequiredLevel.None);
-            am.DisplayName = new Label(field["displayName"].ToString(), 1033);
+            am.DisplayName = new Label(field["displayname"].ToString(), 1033);
             am.Description = new Label("", 1033);
 
             OptionSetMetadata os = new OptionSetMetadata();
             os.IsGlobal = false;
-
             foreach (var option in field["options"])
             {
-                Label label = new Label(option["displayName"].ToString(), 1033);
+                Label label = new Label(option["displayname"].ToString(), 1033);
                 int? value = JSONUtil.GetInt32(option, "value");
                 os.Options.Add(new OptionMetadata(label, value));
             }
@@ -73,36 +79,43 @@ namespace Mezcal.Microsoft.CommonDataService
             this._cdsConnection.Execute(req);
         }
 
-        private void CreateTextField(JToken cdsEntity, JToken field)
+        private void CreateTextField(JToken field)
         {
-            var entitySchemaName = JSONUtil.GetText(cdsEntity, "schemaname");
+            var entitySchemaName = JSONUtil.GetText(field, "entity");
             var displayName = JSONUtil.GetText(field, "displayname");
             var fieldSchemaName = JSONUtil.GetText(field, "schemaname");
 
             var req = new CreateAttributeRequest();
             req.EntityName = entitySchemaName;
 
-            if (field["format"].ToString() == "single")
+            var format = JSONUtil.GetText(field, "format");
+            if (format == null) { format = "single"; }
+
+            int? maxlength = JSONUtil.GetInt32(field, "maxlength");
+
+            if (format == "single")
             {
                 var am = new StringAttributeMetadata();
                 am.SchemaName = field["schemaname"].ToString();
                 am.RequiredLevel = new AttributeRequiredLevelManagedProperty(AttributeRequiredLevel.None);
 
-                int? maxlength = JSONUtil.GetInt32(field, "maxlength");
-                am.MaxLength = maxlength == 0 ? 100 : maxlength;
-                
-                
+                maxlength = maxlength == null ? 100 : maxlength;
+                am.MaxLength = maxlength;
+
                 am.FormatName = StringFormatName.Text;
                 am.DisplayName = new Label(displayName, 1033);
                 am.Description = new Label("", 1033);
                 req.Attribute = am;
             }
-            else if (field["format"].ToString() == "multi")
+            else if (format == "multi")
             {
                 var am = new MemoAttributeMetadata();
                 am.SchemaName = fieldSchemaName;
                 am.RequiredLevel = new AttributeRequiredLevelManagedProperty(AttributeRequiredLevel.None);
-                am.MaxLength = field.MaxLength == 0 ? 100 : field.MaxLength;
+
+                maxlength = maxlength == null ? 2000 : maxlength;
+                am.MaxLength = maxlength;
+
                 am.DisplayName = new Label(displayName, 1033);
                 am.Description = new Label("", 1033);
                 req.Attribute = am;
@@ -111,37 +124,45 @@ namespace Mezcal.Microsoft.CommonDataService
             this._cdsConnection.Execute(req);
         }
 
-        private void CreateIntegerField(JToken cdsEntity, JToken field)
+        private void CreateIntegerField(JToken field)
         {
+            var entitySchemaName = JSONUtil.GetText(field, "entity");
+            var displayName = JSONUtil.GetText(field, "displayname");
+            var fieldSchemaName = JSONUtil.GetText(field, "schemaname");
+
             CreateAttributeRequest req = new CreateAttributeRequest
             {
-                EntityName = cdsEntity.Entity.SchemaName,
+                EntityName = entitySchemaName,
                 Attribute = new IntegerAttributeMetadata
                 {
-                    SchemaName = field.SchemaName,
+                    SchemaName = fieldSchemaName,
                     RequiredLevel = new AttributeRequiredLevelManagedProperty(AttributeRequiredLevel.None),
-                    MaxValue = field.MaxValue == null ? null : field.MaxValue,
-                    MinValue = field.MinValue == null ? null : field.MinValue,
-                    DisplayName = new CDS.Label(field.DisplayName, 1033),
-                    Description = new CDS.Label("", 1033)
+                    //MaxValue = field.MaxValue == null ? null : field.MaxValue,
+                    //MinValue = field.MinValue == null ? null : field.MinValue,
+                    DisplayName = new Label(displayName, 1033),
+                    Description = new Label("", 1033)
                 }
             };
 
             this._cdsConnection.Execute(req);
         }
 
-        private void CreateMoneyField(JToken cdsEntity, JToken field)
+        private void CreateMoneyField(JToken field)
         {
+            var entitySchemaName = JSONUtil.GetText(field, "entity");
+            var displayName = JSONUtil.GetText(field, "displayname");
+            var fieldSchemaName = JSONUtil.GetText(field, "schemaname");
+
             CreateAttributeRequest req = new CreateAttributeRequest
             {
-                EntityName = cdsEntity.Entity.SchemaName,
+                EntityName = entitySchemaName,
                 Attribute = new MoneyAttributeMetadata
                 {
-                    SchemaName = field.SchemaName,
+                    SchemaName = fieldSchemaName,
                     RequiredLevel = new AttributeRequiredLevelManagedProperty(AttributeRequiredLevel.None),
                     PrecisionSource = 2,
-                    DisplayName = new CDS.Label(field.DisplayName, 1033),
-                    Description = new CDS.Label("", 1033),
+                    DisplayName = new Label(displayName, 1033),
+                    Description = new Label("", 1033),
 
                 }
             };
@@ -149,39 +170,49 @@ namespace Mezcal.Microsoft.CommonDataService
             this._cdsConnection.Execute(req);
         }
 
-        private void CreateBooleanField(JToken cdsEntity, JToken field)
+        private void CreateBooleanField(JToken field)
         {
+            var entitySchemaName = JSONUtil.GetText(field, "entity");
+            var displayName = JSONUtil.GetText(field, "displayname");
+            var fieldSchemaName = JSONUtil.GetText(field, "schemaname");
+
             CreateAttributeRequest req = new CreateAttributeRequest();
-            req.EntityName = cdsEntity.Entity.SchemaName;
+            req.EntityName = entitySchemaName;
 
             var am = new BooleanAttributeMetadata();
-            am.SchemaName = field.SchemaName;
+            am.SchemaName = fieldSchemaName;
             am.RequiredLevel = new AttributeRequiredLevelManagedProperty(AttributeRequiredLevel.None);
-            am.DisplayName = new CDS.Label(field.DisplayName, 1033);
-            am.Description = new CDS.Label("", 1033);
+            am.DisplayName = new Label(displayName, 1033);
+            am.Description = new Label("", 1033);
 
             am.OptionSet = new BooleanOptionSetMetadata(
-                new OptionMetadata(new CDS.Label("Yes", 1033), 1),
-                new OptionMetadata(new CDS.Label("No", 1033), 0));
+                new OptionMetadata(new Label("Yes", 1033), 1),
+                new OptionMetadata(new Label("No", 1033), 0));
 
             req.Attribute = am;
 
             this._cdsConnection.Execute(req);
         }
 
-        private void CreateDateTimeField(JToken cdsEntity, JToken field)
+        private void CreateDateTimeField(JToken field)
         {
+            var entitySchemaName = JSONUtil.GetText(field, "entity");
+            var displayName = JSONUtil.GetText(field, "displayname");
+            var fieldSchemaName = JSONUtil.GetText(field, "schemaname");
+            
             CreateAttributeRequest req = new CreateAttributeRequest();
-            req.EntityName = cdsEntity.Entity.SchemaName;
+            req.EntityName = entitySchemaName;
             var dta = new DateTimeAttributeMetadata();
-            dta.SchemaName = field.SchemaName;
+            dta.SchemaName = fieldSchemaName;
             dta.RequiredLevel = new AttributeRequiredLevelManagedProperty(AttributeRequiredLevel.None);
 
-            if (field.DateTimeOption == DateTimeOption.DateOnly) { dta.Format = DateTimeFormat.DateOnly; }
-            else if (field.DateTimeOption == DateTimeOption.DateAndTime) { dta.Format = DateTimeFormat.DateAndTime; }
+            var datetimeoption = JSONUtil.GetText(field, "datetimeoption");
+            if (datetimeoption == null) { datetimeoption = "dateonly"; }
+            if (datetimeoption == "dateonly") { dta.Format = DateTimeFormat.DateOnly; }
+            else if (datetimeoption == "datetime") { dta.Format = DateTimeFormat.DateAndTime; }
 
-            dta.DisplayName = new CDS.Label(field.DisplayName, 1033);
-            dta.Description = new CDS.Label("", 1033);
+            dta.DisplayName = new Label(displayName, 1033);
+            dta.Description = new Label("", 1033);
             req.Attribute = dta;
 
             this._cdsConnection.Execute(req);
@@ -196,16 +227,27 @@ namespace Mezcal.Microsoft.CommonDataService
         /// <param name="field">
         /// Uses: LookupField.SchemaName, .LookupToEntity, .LookupToField
         /// </param>
-        public void CreateLookupField(JToken cdsEntity, JToken field)
+        public void CreateLookupField(JToken field)
         {
+            var entitySchemaName = JSONUtil.GetText(field, "entity");
+            var displayName = JSONUtil.GetText(field, "displayname");
+            var fieldSchemaName = JSONUtil.GetText(field, "schemaname");
+
+            var targetentity = JSONUtil.GetText(field, "target-entity");
+            var targetfield = JSONUtil.GetText(field, "target-field");
+
+            var relationshipname = JSONUtil.GetText(field, "relname");
+
+            var em = this._cdsConnection.GetEntityMetadata(entitySchemaName);
+
             CreateOneToManyRequest req = new CreateOneToManyRequest();
 
             // define the general lookup metadata
             var la = new LookupAttributeMetadata();
-            la.Description = new CDS.Label("", 1033);
-            la.DisplayName = new CDS.Label(field.DisplayName, 1033);
-            la.LogicalName = field.SchemaName;
-            la.SchemaName = field.SchemaName;
+            la.Description = new Label("", 1033);
+            la.DisplayName = new Label(displayName, 1033);
+            la.LogicalName = fieldSchemaName;
+            la.SchemaName = fieldSchemaName;
             la.RequiredLevel = new AttributeRequiredLevelManagedProperty(
                 AttributeRequiredLevel.Recommended);
             req.Lookup = la;
@@ -217,7 +259,7 @@ namespace Mezcal.Microsoft.CommonDataService
             var amc = new AssociatedMenuConfiguration();
             amc.Behavior = AssociatedMenuBehavior.UseCollectionName;
             amc.Group = AssociatedMenuGroup.Details;
-            amc.Label = new CDS.Label(cdsEntity.Entity.CollectionName, 1033);
+            amc.Label = em.DisplayCollectionName;
             amc.Order = 10000;
             rel.AssociatedMenuConfiguration = amc;
 
@@ -232,35 +274,29 @@ namespace Mezcal.Microsoft.CommonDataService
             rel.CascadeConfiguration = cc;
 
             // 1:N entity reference
-            rel.ReferencedEntity = field.LookupToEntity;
-            rel.ReferencedAttribute = field.LookupToField;
-            rel.ReferencingEntity = cdsEntity.Entity.SchemaName;
+            rel.ReferencedEntity = targetentity;
+            rel.ReferencedAttribute = targetfield;
+            rel.ReferencingEntity = entitySchemaName;
 
-            string relName = null;
-            if (field.RelationshipName != null) { relName = field.RelationshipName; }
-            //else { relName = entity.GetNextRelationshipName(field.LookupToEntity); }
-            else { relName = this.GetNextRelationshipName(cdsEntity.Entity, field); }
-
-            rel.SchemaName = relName;
+            if (relationshipname == null) { relationshipname = this.GetNextRelationshipName(em, field); }
+            rel.SchemaName = relationshipname;
 
             req.OneToManyRelationship = rel;
 
             this._cdsConnection.Execute(req);
         }
 
-        private string GetNextRelationshipName(JToken entity, JToken specField)
+        private string GetNextRelationshipName(EntityMetadata em, JToken specField)
         {
             string result = null;
 
-            this.Connect();
-
-            var em = this.GetEntityMetadata(entity.SchemaName);
+            var targetentity = JSONUtil.GetText(specField, "target-entity");
 
             int num = 0;
             while (num < 1000) // hopefully will find a unique name after 1000 times! :)
             {
                 num++;
-                string candidateName = String.Format("{0}_{1}_{2}", specField.LookupToEntity, entity.SchemaName, num);
+                string candidateName = String.Format("{0}_{1}_{2}", targetentity, em.SchemaName, num);
                 var rel = em.ManyToOneRelationships.FirstOrDefault(r => r.SchemaName == candidateName);
                 if (rel == null) { result = candidateName; break; }
             }
@@ -268,6 +304,5 @@ namespace Mezcal.Microsoft.CommonDataService
             return result;
         }
 
-        */
     }
 }

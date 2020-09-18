@@ -13,12 +13,15 @@ namespace Mezcal.Microsoft.BingSearch
 {
     public class SearchBing : ICommand
     {
-        private const string uriBase = "https://api.cognitive.microsoft.com/bing/v7.0/search";
         private string accessKey = null;
 
         public void Process(JObject command, Context context)
         {
             context.Trace("bing-websearch");
+
+            var uriKey = "$bingsearch-uri";
+            if (context.Variables.ContainsKey(uriKey) == false) { return; }
+            var uriBase = context.Variables[uriKey].ToString();
 
             var configKey = "$bingsearch-key";
             if (context.Variables.ContainsKey(configKey) == false) { return; }
@@ -27,22 +30,21 @@ namespace Mezcal.Microsoft.BingSearch
             var searchTerm = JSONUtil.GetText(command, "#bing-websearch");
             if (searchTerm == null) { searchTerm = JSONUtil.GetText(command, "search-term"); }
 
-            var setName = JSONUtil.GetText(command, "set");
-
             Console.OutputEncoding = Encoding.UTF8;
             if (accessKey.Length == 32)
             {
                 this.ConsoleWriteLine("Searching the Web for: " + searchTerm);
-                SearchResult result = BingWebSearch(searchTerm);
-                this.ConsoleWriteLine("\nRelevant HTTP Headers:\n");
-                foreach (var header in result.relevantHeaders)
-                    Console.WriteLine(header.Key + ": " + header.Value);
+                SearchResult result = BingWebSearch(uriBase, searchTerm);
+                //this.ConsoleWriteLine("\nRelevant HTTP Headers:\n");
+                //foreach (var header in result.relevantHeaders)
+                //    Console.WriteLine(header.Key + ": " + header.Value);
 
-                this.ConsoleWriteLine("\nJSON Response:\n");
+                //this.ConsoleWriteLine("\nJSON Response:\n");
                 //Console.WriteLine(JsonPrettyPrint(result.jsonResult));
                 JToken jResult = JToken.Parse(result.jsonResult);
                 //this.ConsoleWriteLine(jResult.ToString());
 
+                var setName = JSONUtil.GetText(command, "set");
                 if (setName != null) { context.Store(setName, jResult); }
 
             }
@@ -56,7 +58,7 @@ namespace Mezcal.Microsoft.BingSearch
 
         private void ConsoleWriteLine(string text)
         {
-            //Console.WriteLine(text);
+            Console.WriteLine(text);
         }
 
         struct SearchResult
@@ -65,7 +67,7 @@ namespace Mezcal.Microsoft.BingSearch
             public Dictionary<String, String> relevantHeaders;
         }
 
-        private SearchResult BingWebSearch(string searchQuery)
+        private SearchResult BingWebSearch(string uriBase, string searchQuery)
         {
             // Construct the search request URI.
             var uriQuery = uriBase + "?q=" + Uri.EscapeDataString(searchQuery);

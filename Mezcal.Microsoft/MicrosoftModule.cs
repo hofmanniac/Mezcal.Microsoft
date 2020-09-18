@@ -32,7 +32,9 @@ namespace Mezcal.Microsoft
             var commandName = JSONUtil.GetCommandName(joCommand);
 
             if (commandName == null) { return null; }
-            if (commandName == "cds-create-entity") { result = new CDSCreateEntity(); }
+            if (commandName == "cds-entity") { result = new CDSCreateEntity(); }
+            else if (commandName == "cds-field") { result = new CDSCreateField(); }
+            else if (commandName == "cds-fields") { result = new CDSCreateFields(); }
             else if (commandName == "cds-import-solution") { result = new CDSImportSolution(); }
             else if (commandName == "cds-import-data") { result = new CDSImportData(); }
             else if (commandName == "cds-update-data") { result = new CDSUpdateData(); }

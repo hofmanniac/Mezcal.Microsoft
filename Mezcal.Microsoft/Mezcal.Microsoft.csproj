@@ -166,6 +166,7 @@
     <Compile Include="CommonDataService\CDSConnection.cs" />
     <Compile Include="CommonDataService\CDSCreateEntity.cs" />
     <Compile Include="CommonDataService\CDSCreateField.cs" />
+    <Compile Include="CommonDataService\CDSCreateFields.cs" />
     <Compile Include="CommonDataService\CDSImportData.cs" />
     <Compile Include="CommonDataService\CDSImportSolution.cs" />
     <Compile Include="CommonDataService\CDSRetrieve.cs" />
