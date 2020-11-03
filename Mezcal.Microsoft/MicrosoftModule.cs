@@ -13,17 +13,17 @@ namespace Mezcal.Microsoft
 {
     public class MicrosoftModule : IModule
     {
-        public IConnection ProvideConnection(ConnectionConfig envConfig)
-        {
-            IConnection result = null;
+        //public IConnection ProvideConnection(JObject envConfig)
+        //{
+        //    IConnection result = null;
 
-            if (envConfig.Type == "Microsoft.CommonDataService")
-            {
-                result = new CDSConnection(envConfig);
-            }
+        //    if (envConfig.Type == "Microsoft.CommonDataService")
+        //    {
+        //        result = new CDSConnection(envConfig);
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
 
         public ICommand ResolveCommand(JObject joCommand)
         {
@@ -44,6 +44,7 @@ namespace Mezcal.Microsoft
             //else if (commandName == "excel-load") { result = new Office.LoadExcel(); }
             else if (commandName == "sharepoint-download") { result = new Office.SharePointDownload(); }
             else if (commandName == "word-export") { result = new Office.WordExport(); }
+            else if (commandName == "excel-export") { result = new Office.ExcelExport(); }
 
             return result;
         }

@@ -21,7 +21,8 @@ namespace Mezcal.Microsoft.CommonDataService
 
         public void Process(JObject command, Context context)
         {
-            string entity = command["entity"].ToString();
+            var entity = command["#cds-import-data"];
+            if (entity == null) { entity = command["entity"].ToString(); }
             string source = command["source"].ToString();
             JArray map = (JArray)command["map"];
 
@@ -31,7 +32,7 @@ namespace Mezcal.Microsoft.CommonDataService
             JArray set = (JArray)context.Fetch(source);
             //this._context = context;
 
-            var entities = CDSConnection.ConvertToCDSEntities(entity, set, map, cdsConnection);
+            var entities = CDSConnection.ConvertToCDSEntities(entity.ToString(), set, map, cdsConnection);
             this.CreateRecords(entities, cdsConnection);
         }
 

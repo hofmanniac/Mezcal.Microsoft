@@ -25,7 +25,7 @@ namespace Mezcal.Microsoft.CommonDataService
             string into = command["into"].ToString();
             string env = Connections.JSONUtil.GetText(command, "env");
 
-            var cdsConnection = (CDSConnection)context.GetConnection(env);
+            var cdsConnection = new CDSConnection(env);
 
             var entity = cdsConnection.Retrieve(entityName, recordId, columnSet);
 

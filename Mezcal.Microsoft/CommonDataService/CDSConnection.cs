@@ -17,61 +17,91 @@ namespace Mezcal.Microsoft.CommonDataService
 {
     public class CDSConnection : IConnection
     {
-        private ConnectionConfig _config = null;
+        private JObject _config = null;
 
         private IOrganizationService ServiceEndpoint = null;
 
-        public CDSConnection(ConnectionConfig config)
+        public CDSConnection(JToken config)
         {
-            this._config = config;
+            if (config.Type == JTokenType.Object)
+            {
+                this._config = (JObject)config;
+            }
         }
 
         public static CDSConnection FromCommand(JToken command, Context context)
         {
-            CDSConnection cdsConnection = null;
-            var config = command["config"];
-            if (config == null) { cdsConnection = (CDSConnection)context.DefaultConnection; }
-            else { cdsConnection = new CDSConnection(config); }
-            if (cdsConnection == null) { Console.WriteLine("No connection configuration information available. Aborting operation."); return null; }
+            var config = command["env"];           
+            var cdsConnection = new CDSConnection(config);
+            if (cdsConnection == null) { Console.WriteLine("No environment configuration information available. Aborting operation."); return null; }
             return cdsConnection;
-        }
-        public CDSConnection(JToken config)
-        {
-            var url = JSONUtil.GetText(config, "url");
-            var username = JSONUtil.GetText(config, "username");
-            var password = JSONUtil.GetText(config, "p");
-
-            this._config = new ConnectionConfig(url, username, password);
         }
 
         private IOrganizationService GetService()
         {
             StringBuilder connectionString = new StringBuilder();
-            connectionString.Append("AuthType=Office365; RequireNewInstance=True;");
-            connectionString.Append("Username = " + _config.UserName + ";");
-            connectionString.Append("Password = " + _config.Password + ";");
-            connectionString.Append("Url = " + _config.Url);
 
-            Console.WriteLine("Connecting to " + _config.Url + "...");
+            if (this._config["appid"] != null)
+            {
+                var url = _config["url"];
+                var appid = _config["appid"];
+                var secret = _config["clientsecret"];
+
+                connectionString.Append($"AuthType=ClientSecret;");
+                connectionString.Append($"url={url};");
+                connectionString.Append($"ClientId={appid};");
+                connectionString.Append($"ClientSecret={secret}");
+            }
+            else
+            {
+                var url = _config["url"];
+                var password = _config["p"];
+                var username = _config["username"];
+
+                connectionString.Append($"AuthType=Office365;");
+                connectionString.Append($"RequireNewInstance=True;");
+                connectionString.Append($"Username = {username};");
+                connectionString.Append($"Password = {password};");
+                connectionString.Append($"Url = {url}");
+            }
+
+            Console.WriteLine($"Connecting to {_config["url"]}...");
+
             var result = GetService(connectionString.ToString());
             return result;
         }
 
         private IOrganizationService GetService(string connectionString)
         {
-            CrmServiceClient client = new CrmServiceClient(connectionString);
-            OrganizationServiceProxy serviceProxy = client.OrganizationServiceProxy;
-            serviceProxy.Timeout = new TimeSpan(0, 15, 0);
-            //serviceProxy.Authenticate();
-            //serviceProxy.EnableProxyTypes();
-            IOrganizationService service = serviceProxy;
+            var client = new CrmServiceClient(connectionString);
 
-            return service;
+            if (client.OrganizationServiceProxy == null)
+            {
+                if (client.OrganizationWebProxyClient == null)
+                {
+                    Console.WriteLine("Unable to connect to Service: " + client.LastCrmError);
+                    return null;
+                }
+                else
+                {
+                    return client.OrganizationWebProxyClient;
+                }
+            }
+            else
+            {
+                var serviceProxy = client.OrganizationServiceProxy;
+                serviceProxy.Timeout = new TimeSpan(0, 15, 0);
+                //serviceProxy.Authenticate();
+                //serviceProxy.EnableProxyTypes();
+                IOrganizationService service = serviceProxy;
+                return service;
+            }
         }
 
         public OrganizationResponse Execute(OrganizationRequest request)
         {
             this.Connect();
+            if (this.ServiceEndpoint == null) { return null; }
 
             return this.ServiceEndpoint.Execute(request);
         }
@@ -344,6 +374,7 @@ namespace Mezcal.Microsoft.CommonDataService
             try
             {
                 var response = (RetrieveEntityResponse)this.Execute(request);
+                if (response == null) { return null; }
 
                 EntityMetadata entityMetaData = response.EntityMetadata;
                 return entityMetaData;
